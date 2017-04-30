@@ -44,6 +44,7 @@
 #include "main.h"
 #include "stm32f4xx_hal.h"
 #include "gpio.h"
+#include <stdbool.h>
 
 /* USER CODE BEGIN Includes */
 
@@ -68,6 +69,9 @@ void Error_Handler(void);
 void blinkLED(int times, int duration);
 void jumpToApp();
 void boot_jump();
+uint32_t dfuActive(USBD_HandleTypeDef *pdev);
+void disconnectUsb();
+uint32_t userAppExists();
 uint32_t checkAndClearBootloaderFlag();
 uint32_t rtc_read_backup_reg(uint32_t BackupRegister);
 void rtc_write_backup_reg(uint32_t BackupRegister, uint32_t data);
@@ -90,40 +94,6 @@ int main(void)
 
 	  HAL_Delay(50);
 
-	  /* Configure user Button */
-	  blinkLED(1, 500);
-
-	  uint32_t bootloaderFlag = checkAndClearBootloaderFlag();
-
-	  if(bootloaderFlag == BOOTLOADER_FLAG_NONE) {
-
-		  /* Check if the USER Button is not pressed */
-		  if (HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin))
-		  {
-		  blinkLED(1, 500);
-
-			/* Test if user code is programmed starting from USBD_DFU_APP_DEFAULT_ADD
-			 * address */
-			if (((*(__IO uint32_t *) USBD_DFU_APP_DEFAULT_ADD) & 0xFFFD0FFF) ==
-				0x20000000)
-			{
-			  blinkLED(1, 100);
-			  HAL_Delay(10);
-			  /* Jump to user application */
-			  //JumpAddress = *(__IO uint32_t *) (USBD_DFU_APP_DEFAULT_ADD + 4);
-			  //JumpToApplication = (pFunction) JumpAddress;
-
-			  /* Initialize user application's Stack Pointer */
-			  //__set_MSP((*(__IO uint32_t *) USBD_DFU_APP_DEFAULT_ADD));
-			  //JumpToApplication();
-
-			  jumpToApp();
-			}
-		  }
-	  }
-
-	  blinkLED(5, 100);
-
 	  /* Otherwise enters DFU mode to allow user programming his application */
 	  /* Init Device Library */
 	  USBD_Init(&USBD_Device, &DFU_Desc, 0);
@@ -137,11 +107,76 @@ int main(void)
 	  /* Start Device Process */
 	  USBD_Start(&USBD_Device);
 
-	  /* Run Application (Interrupt mode) */
-	  while (1)
-	  {
+	  /* Configure user Button */
+	  blinkLED(1, 500);
+
+	  uint32_t bootloaderFlag = checkAndClearBootloaderFlag();
+	  bool buttonPressed = !HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin);
+
+	  if(bootloaderFlag == BOOTLOADER_FLAG_NONE) {
+		  int loops = 10;
+
+		  while (loops > 0 || buttonPressed || !userAppExists() || bootloaderFlag == BOOTLOADER_FLAG_DFU) {
+			  blinkLED(1, 150);
+
+			  //if there is a DFU transfer active we do not count down
+			  if(dfuActive(&USBD_Device) == 0) {
+				  loops--;
+			  }
+		  }
+
+		  disconnectUsb();
+		  jumpToApp();
 	  }
 
+	  //blinkLED(5, 100);
+
+
+
+	  /* Run Application (Interrupt mode) */
+	  //while (1)
+	  //{
+	  //}
+
+}
+
+uint32_t userAppExists() {
+	if (((*(__IO uint32_t *) USBD_DFU_APP_DEFAULT_ADD) & 0xFFFD0FFF) ==	0x20000000)	{
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+uint32_t dfuActive(USBD_HandleTypeDef *pdev) {
+	USBD_DFU_HandleTypeDef   *hdfu;
+	hdfu = (USBD_DFU_HandleTypeDef*) pdev->pClassData;
+
+	if(hdfu->dev_state == DFU_STATE_IDLE) {
+		return 0;
+	} else {
+		return 1;
+	}
+
+}
+
+void disconnectUsb() {
+	GPIO_InitTypeDef GPIO_InitStruct;
+
+	/*Configure GPIO pin Output Level */
+	//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_RESET);
+
+	/*Configure GPIO pin : PtPin */
+	GPIO_InitStruct.Pin = GPIO_PIN_12;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_RESET);
+	HAL_Delay(50);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_SET);
+	HAL_Delay(50);
 }
 
 void blinkLED(int times, int duration) {
