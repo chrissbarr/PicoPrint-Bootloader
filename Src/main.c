@@ -67,6 +67,7 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
+void rtcSetup();
 void blinkLED(int times, int duration);
 void jumpToApp();
 void boot_jump();
@@ -93,24 +94,14 @@ int main(void)
 
 	  blinkLED(1, 500);
 
-	  RtcHandle.Instance            = RTC;
-	  RtcHandle.Init.HourFormat     = RTC_HOURFORMAT_24;
-	  RtcHandle.Init.AsynchPrediv   = RTC_ASYNCH_PREDIV;
-	  RtcHandle.Init.SynchPrediv    = RTC_SYNCH_PREDIV;
-	  RtcHandle.Init.OutPut         = RTC_OUTPUT_DISABLE;
-	  RtcHandle.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
-	  RtcHandle.Init.OutPutType     = RTC_OUTPUT_TYPE_OPENDRAIN;
+	  rtcSetup();
 
-	  if (HAL_RTC_Init(&RtcHandle) != HAL_OK)
-	  {
-	    /* Initialization Error */
-	    Error_Handler();
-	  }
+	  //HAL_RTCEx_BKUPWrite(&RtcHandle, BOOTLOADER_FLAG_REGISTER, BOOTLOADER_FLAG_SKIP);
 
 	  uint32_t bootloaderFlag = checkAndClearBootloaderFlag();
 
 	  if(bootloaderFlag == BOOTLOADER_FLAG_SKIP) {
-		  blinkLED(1, 1000);
+		  blinkLED(5000, 10);
 		  //disconnectUsb();
 		  jumpToApp();
 	  }
@@ -127,8 +118,6 @@ int main(void)
 
 	  /* Start Device Process */
 	  USBD_Start(&USBD_Device);
-
-
 
 	  bool buttonPressed = !HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin);
 
@@ -160,10 +149,25 @@ uint32_t userAppExists() {
 	}
 }
 
+void rtcSetup() {
+	  RtcHandle.Instance            = RTC;
+	  //RtcHandle.Init.HourFormat     = RTC_HOURFORMAT_24;
+	  //RtcHandle.Init.AsynchPrediv   = RTC_ASYNCH_PREDIV;
+	  //RtcHandle.Init.SynchPrediv    = RTC_SYNCH_PREDIV;
+	  //RtcHandle.Init.OutPut         = RTC_OUTPUT_DISABLE;
+	  //RtcHandle.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+	  //RtcHandle.Init.OutPutType     = RTC_OUTPUT_TYPE_OPENDRAIN;
+
+	  if (HAL_RTC_Init(&RtcHandle) != HAL_OK)
+	  {
+	    /* Initialization Error */
+	    Error_Handler();
+	  }
+}
+
 uint32_t dfuActive(USBD_HandleTypeDef *pdev) {
 	USBD_DFU_HandleTypeDef   *hdfu;
 	hdfu = (USBD_DFU_HandleTypeDef*) pdev->pClassData;
-
 	if(hdfu->dev_state == DFU_STATE_IDLE) {
 		return 0;
 	} else {
@@ -393,15 +397,9 @@ void boot_jump() {
 }
 
 uint32_t checkAndClearBootloaderFlag() {
-	//RTC_HandleTypeDef RtcHandle;
-	//RtcHandle.Instance = RTC;
-
-	//HAL_PWR_EnableBkUpAccess();
 
 	uint32_t bootloaderFlag = HAL_RTCEx_BKUPRead(&RtcHandle, BOOTLOADER_FLAG_REGISTER);
 	HAL_RTCEx_BKUPWrite(&RtcHandle, BOOTLOADER_FLAG_REGISTER, BOOTLOADER_FLAG_NONE);
-
-	//HAL_PWR_DisableBkUpAccess();
 
 	return bootloaderFlag;
 
