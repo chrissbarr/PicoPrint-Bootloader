@@ -38,7 +38,11 @@ Middlewares/ST/STM32_USB_Device_Library/Class/DFU/Src/usbd_dfu.o: \
  D:/Git/F4Bootloader/Bootloader/F4Bootloader/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h \
  D:/Git/F4Bootloader/Bootloader/F4Bootloader/Inc/usbd_desc.h \
  D:/Git/F4Bootloader/Bootloader/F4Bootloader/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h \
- D:/Git/F4Bootloader/Bootloader/F4Bootloader/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h
+ D:/Git/F4Bootloader/Bootloader/F4Bootloader/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h \
+ D:/Git/F4Bootloader/Bootloader/F4Bootloader/Inc/main.h \
+ D:/Git/F4Bootloader/Bootloader/F4Bootloader/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h \
+ D:/Git/F4Bootloader/Bootloader/F4Bootloader/Inc/usbd_desc.h \
+ D:/Git/F4Bootloader/Bootloader/F4Bootloader/Inc/usbd_dfu_flash.h
 
 D:/Git/F4Bootloader/Bootloader/F4Bootloader/Middlewares/ST/STM32_USB_Device_Library/Class/DFU/Inc/usbd_dfu.h:
 
@@ -117,3 +121,11 @@ D:/Git/F4Bootloader/Bootloader/F4Bootloader/Inc/usbd_desc.h:
 D:/Git/F4Bootloader/Bootloader/F4Bootloader/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h:
 
 D:/Git/F4Bootloader/Bootloader/F4Bootloader/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h:
+
+D:/Git/F4Bootloader/Bootloader/F4Bootloader/Inc/main.h:
+
+D:/Git/F4Bootloader/Bootloader/F4Bootloader/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h:
+
+D:/Git/F4Bootloader/Bootloader/F4Bootloader/Inc/usbd_desc.h:
+
+D:/Git/F4Bootloader/Bootloader/F4Bootloader/Inc/usbd_dfu_flash.h:

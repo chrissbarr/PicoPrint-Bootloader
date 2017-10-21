@@ -63,9 +63,25 @@
 #define BUTTON_Pin GPIO_PIN_7
 #define BUTTON_GPIO_Port GPIOE
 /* USER CODE BEGIN Private defines */
-#define BOOTLOADER_FLAG_REGISTER	0x00
+#define BOOTLOADER_FLAG_REGISTER	RTC_BKP_DR0
 #define BOOTLOADER_FLAG_NONE 		0x00
 #define BOOTLOADER_FLAG_DFU			0x01
+#define BOOTLOADER_FLAG_SKIP		0x02
+
+#define DFU_WAIT_LOOPS	30		//system will wait DFU_WAIT_LOOPS * LED_BLINK_TIME for DFU before starting user application
+#define LED_BLINK_TIME	250
+
+#define RTC_CLOCK_SOURCE_LSI
+
+#ifdef RTC_CLOCK_SOURCE_LSI
+	#define RTC_ASYNCH_PREDIV    0x7F
+	#define RTC_SYNCH_PREDIV     0x0130
+#endif
+
+#ifdef RTC_CLOCK_SOURCE_LSE
+	#define RTC_ASYNCH_PREDIV  0x7F
+	#define RTC_SYNCH_PREDIV   0x00FF
+#endif
 /* USER CODE END Private defines */
 
 /**
