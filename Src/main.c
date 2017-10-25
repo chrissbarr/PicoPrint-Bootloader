@@ -84,7 +84,6 @@ uint32_t checkAndClearBootFlag();
 
 int main(void)
 {
-
 	  /* STM32F446xx HAL library initialization */
 	  HAL_Init();
 
@@ -95,12 +94,11 @@ int main(void)
 
 	  pulseLED();
 
-	  HAL_Delay(250);
-
 	  rtcSetup();
 	  uint32_t bootloaderFlag = checkAndClearBootFlag();
+	  bool buttonPressed = !HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin);
 
-	  if(bootloaderFlag != BOOTLOADER_FLAG_SKIP) {
+	  if(bootloaderFlag != BOOTLOADER_FLAG_SKIP || buttonPressed) {
 
 		  /* Enter DFU mode to allow user programming application */
 		  USBD_Init(&USBD_Device, &DFU_Desc, 0);						/* Init Device Library */
@@ -108,28 +106,32 @@ int main(void)
 		  USBD_DFU_RegisterMedia(&USBD_Device, &USBD_DFU_Flash_fops);	/* Add DFU Media interface */
 		  USBD_Start(&USBD_Device);										/* Start Device Process */
 
-		  bool buttonPressed = !HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin);
+		  HAL_Delay(250);
 
-		  int loops = DFU_WAIT_LOOPS;
-		  int dfuDone = 0;
-		  uint32_t appExists = userAppExists();
+		  //only wait for DFU if USB is connected to host
+		  if(USBD_Device.dev_state == USBD_STATE_CONFIGURED) {
 
-		  while (loops > 0 || buttonPressed || !appExists || bootloaderFlag == BOOTLOADER_FLAG_DFU) {
-			  pulseLED();
+			  int loops = DFU_WAIT_LOOPS;
+			  int dfuDone = 0;
+			  uint32_t appExists = userAppExists();
 
-			  if(dfuActive(&USBD_Device) == 0) {
-				  //no DFU transfer at present. Count down to normal boot.
-				  loops--;
+			  while (loops > 0 || buttonPressed || !appExists || bootloaderFlag == BOOTLOADER_FLAG_DFU) {
+				  pulseLED();
 
-				  //if transfer has previously taken place, skip count down and boot.
-				  if(dfuDone > 2) {
-					  break;
+				  if(dfuActive(&USBD_Device) == 0) {
+					  //no DFU transfer at present. Count down to normal boot.
+					  loops--;
+
+					  //if transfer has previously taken place, skip count down and boot.
+					  if(dfuDone > 2) {
+						  break;
+					  }
+				  } else {
+					  dfuDone++;
 				  }
-			  } else {
-				  dfuDone++;
 			  }
+			  disconnectUsb();
 		  }
-		  disconnectUsb();
 	  }
 	  jumpToApp();
 }
