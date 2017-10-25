@@ -69,12 +69,13 @@ void Error_Handler(void);
 /* Private function prototypes -----------------------------------------------*/
 void rtcSetup();
 void blinkLED(int times, int duration);
+void pulseLED();
 void jumpToApp();
 void boot_jump();
 uint32_t dfuActive(USBD_HandleTypeDef *pdev);
 void disconnectUsb();
 uint32_t userAppExists();
-uint32_t checkAndClearBootloaderFlag();
+uint32_t checkAndClearBootFlag();
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -87,58 +88,50 @@ int main(void)
 	  /* STM32F446xx HAL library initialization */
 	  HAL_Init();
 
-	  /* Configure the System clock to have a frequency of 168 MHz */
+	  /* Configure the System clock to have a frequency of 180 MHz */
 	  SystemClock_Config();
 
 	  MX_GPIO_Init();
 
-	  blinkLED(1, 500);
+	  pulseLED();
+
+	  HAL_Delay(250);
 
 	  rtcSetup();
+	  uint32_t bootloaderFlag = checkAndClearBootFlag();
 
-	  //HAL_RTCEx_BKUPWrite(&RtcHandle, BOOTLOADER_FLAG_REGISTER, BOOTLOADER_FLAG_SKIP);
+	  if(bootloaderFlag != BOOTLOADER_FLAG_SKIP) {
 
-	  uint32_t bootloaderFlag = checkAndClearBootloaderFlag();
+		  /* Enter DFU mode to allow user programming application */
+		  USBD_Init(&USBD_Device, &DFU_Desc, 0);						/* Init Device Library */
+		  USBD_RegisterClass(&USBD_Device, USBD_DFU_CLASS);				/* Add Supported Class */
+		  USBD_DFU_RegisterMedia(&USBD_Device, &USBD_DFU_Flash_fops);	/* Add DFU Media interface */
+		  USBD_Start(&USBD_Device);										/* Start Device Process */
 
-	  if(bootloaderFlag == BOOTLOADER_FLAG_SKIP) {
-		  blinkLED(5000, 10);
-		  //disconnectUsb();
-		  jumpToApp();
-	  }
+		  bool buttonPressed = !HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin);
 
-	  /* Otherwise enters DFU mode to allow user programming application */
-	  /* Init Device Library */
-	  USBD_Init(&USBD_Device, &DFU_Desc, 0);
-
-	  /* Add Supported Class */
-	  USBD_RegisterClass(&USBD_Device, USBD_DFU_CLASS);
-
-	  /* Add DFU Media interface */
-	  USBD_DFU_RegisterMedia(&USBD_Device, &USBD_DFU_Flash_fops);
-
-	  /* Start Device Process */
-	  USBD_Start(&USBD_Device);
-
-	  bool buttonPressed = !HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin);
-
-	  if(bootloaderFlag == BOOTLOADER_FLAG_NONE) {
 		  int loops = DFU_WAIT_LOOPS;
+		  int dfuDone = 0;
+		  uint32_t appExists = userAppExists();
 
-		  while (loops > 0 || buttonPressed || !userAppExists() || bootloaderFlag == BOOTLOADER_FLAG_DFU) {
-			  blinkLED(1, LED_BLINK_TIME/2);
+		  while (loops > 0 || buttonPressed || !appExists || bootloaderFlag == BOOTLOADER_FLAG_DFU) {
+			  pulseLED();
 
-			  //if there is a DFU transfer active we do not count down, wait for transfer to finish
 			  if(dfuActive(&USBD_Device) == 0) {
+				  //no DFU transfer at present. Count down to normal boot.
 				  loops--;
+
+				  //if transfer has previously taken place, skip count down and boot.
+				  if(dfuDone > 2) {
+					  break;
+				  }
+			  } else {
+				  dfuDone++;
 			  }
-
-			  //buttonPressed = !HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin);
 		  }
-
 		  disconnectUsb();
-		  jumpToApp();
 	  }
-
+	  jumpToApp();
 }
 
 uint32_t userAppExists() {
@@ -150,19 +143,12 @@ uint32_t userAppExists() {
 }
 
 void rtcSetup() {
-	  RtcHandle.Instance            = RTC;
-	  //RtcHandle.Init.HourFormat     = RTC_HOURFORMAT_24;
-	  //RtcHandle.Init.AsynchPrediv   = RTC_ASYNCH_PREDIV;
-	  //RtcHandle.Init.SynchPrediv    = RTC_SYNCH_PREDIV;
-	  //RtcHandle.Init.OutPut         = RTC_OUTPUT_DISABLE;
-	  //RtcHandle.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
-	  //RtcHandle.Init.OutPutType     = RTC_OUTPUT_TYPE_OPENDRAIN;
+	RtcHandle.Instance = RTC;
 
-	  if (HAL_RTC_Init(&RtcHandle) != HAL_OK)
-	  {
-	    /* Initialization Error */
-	    Error_Handler();
-	  }
+	if (HAL_RTC_Init(&RtcHandle) != HAL_OK)
+	{
+		Error_Handler();
+	}
 }
 
 uint32_t dfuActive(USBD_HandleTypeDef *pdev) {
@@ -173,16 +159,12 @@ uint32_t dfuActive(USBD_HandleTypeDef *pdev) {
 	} else {
 		return 1;
 	}
-
 }
 
 void disconnectUsb() {
 	GPIO_InitTypeDef GPIO_InitStruct;
 
-	/*Configure GPIO pin Output Level */
-	//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_RESET);
-
-	/*Configure GPIO pin : PtPin */
+	/*Configure GPIO pin : GPIO_PIN_12 */
 	GPIO_InitStruct.Pin = GPIO_PIN_12;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -201,6 +183,31 @@ void blinkLED(int times, int duration) {
 		HAL_Delay(duration);
 		HAL_GPIO_WritePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin, GPIO_PIN_RESET);
 		HAL_Delay(duration);
+	}
+}
+
+void pulseLED() {
+	int duration = 1600;	//approx 500ms at 180MHz (measured)
+	for(int j = 0; j < duration; j++) {
+		for(int k = 0; k < duration-j; k++) {
+			HAL_GPIO_WritePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin, GPIO_PIN_RESET);
+			asm("NOP");
+		}
+		for(int k = duration; k > duration-j; k--) {
+			HAL_GPIO_WritePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin, GPIO_PIN_SET);
+			asm("NOP");
+		}
+	}
+
+	for(int j = 0; j < duration; j++) {
+		for(int k = 0; k < duration-j; k++) {
+			HAL_GPIO_WritePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin, GPIO_PIN_SET);
+			asm("NOP");
+		}
+		for(int k = duration; k > duration-j; k--) {
+			HAL_GPIO_WritePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin, GPIO_PIN_RESET);
+			asm("NOP");
+		}
 	}
 }
 
@@ -396,7 +403,7 @@ void boot_jump() {
 	JumpToApplication();
 }
 
-uint32_t checkAndClearBootloaderFlag() {
+uint32_t checkAndClearBootFlag() {
 
 	uint32_t bootloaderFlag = HAL_RTCEx_BKUPRead(&RtcHandle, BOOTLOADER_FLAG_REGISTER);
 	HAL_RTCEx_BKUPWrite(&RtcHandle, BOOTLOADER_FLAG_REGISTER, BOOTLOADER_FLAG_NONE);
@@ -418,6 +425,7 @@ void Error_Handler(void)
   /* User can add his own implementation to report the HAL error return state */
   while(1) 
   {
+	  blinkLED(1,125);
   }
   /* USER CODE END Error_Handler */ 
 }

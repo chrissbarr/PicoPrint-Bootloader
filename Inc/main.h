@@ -68,8 +68,7 @@
 #define BOOTLOADER_FLAG_DFU			0x01
 #define BOOTLOADER_FLAG_SKIP		0x02
 
-#define DFU_WAIT_LOOPS	30		//system will wait DFU_WAIT_LOOPS * LED_BLINK_TIME for DFU before starting user application
-#define LED_BLINK_TIME	250
+#define DFU_WAIT_LOOPS	10		//system will wait DFU_WAIT_LOOPS * 500ms for DFU before starting user application
 
 #define RTC_CLOCK_SOURCE_LSI
 
