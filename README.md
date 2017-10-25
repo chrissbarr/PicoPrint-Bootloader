@@ -5,7 +5,7 @@ This is a bootloader for the Aus3D PicoPrint 3D Printer control board. PicoPrint
 This bootloader allows for easier firmware updates via the DFU protocol. The current bootloader behaviour is:
 
 1. On power-up, the status LED will pulse once to indicate that the bootloader has initialised.
-2. The bootloader will then attempt to enter DFU mode. At this point, it will enumerate as a DFU device on the host computer. 
+2. The bootloader will then attempt to enter DFU mode. If connected, it will enumerate as a DFU device on the host computer. If not connected, it will skip DFU mode.
 3. Once in DFU mode, the status LED will pulse constantly. The bootloader will behave as follows:
    1. If there is no user application loaded into flash, stay in DFU mode until one has been downloaded.
    2. If the BUTTON_PIN (internal pullup) was held low on startup, stay in DFU mode until a download has been completed. 
