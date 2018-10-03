@@ -57,11 +57,11 @@
 
 /* Private define ------------------------------------------------------------*/
 
-#define STATUS_LED_Pin GPIO_PIN_2
-#define STATUS_LED_GPIO_Port GPIOA
+#define STATUS_LED_Pin GPIO_PIN_14
+#define STATUS_LED_GPIO_Port GPIOB
 
-#define BUTTON_Pin GPIO_PIN_7
-#define BUTTON_GPIO_Port GPIOE
+#define BUTTON_Pin GPIO_PIN_10
+#define BUTTON_GPIO_Port GPIOC
 /* USER CODE BEGIN Private defines */
 #define BOOTLOADER_FLAG_REGISTER	RTC_BKP_DR0
 #define BOOTLOADER_FLAG_NONE 		0x00
